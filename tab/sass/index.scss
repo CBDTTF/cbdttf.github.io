@@ -1,0 +1,35 @@
+.pages {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 5%;
+  background: #fff;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  position: absolute;
+  transform-origin:50%;
+  transition: .28s;
+}
+
+.pages-scale{
+    transform: scale(0.8);
+    opacity: .62;
+}
+
+#page-container {
+  width: 100%;
+  position: relative;
+  transition: .48s ;
+}
+
+.page-container-translate1{
+  transform: translate3d(0,0,0);
+}
+.page-container-translate2{
+  transform: translate3d(-100%,0,0);
+}
+.page-container-translate3{
+  transform: translate3d(-200%,0,0);
+}
+
+
