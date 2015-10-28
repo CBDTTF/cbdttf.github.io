@@ -28,7 +28,7 @@
 
     <audio loop='loop' id='bgm'>
         <!--<source src="bgm.ogg" type="audio/ogg">-->
-        <source src='bgm3.mp3' type='audio/mpeg'>
+        <source src='bgm4.mp3' type='audio/mpeg'>
         <!--<source src="bgm.wma" type="audio/wma">-->
     </audio>
 </div>
@@ -38,7 +38,9 @@
     var HEIGHT = D.documentElement.clientHeight;
     var WIDTH = D.documentElement.clientWidth;
 
-    WIDTH = WIDTH < HEIGHT ? WIDTH : HEIGHT / 1.68 >> 0;
+    WIDTH = WIDTH < HEIGHT ? WIDTH : HEIGHT / 1.7 ;
+
+
 
     var mainContainer = D.querySelector('#mainContainer');
     mainContainer.style.height = HEIGHT + 'px';
@@ -55,6 +57,7 @@
 <script src='js/mapUtil.js'></script>
 <script src='js/createObjFn.js'></script>
 <script src='js/events.js'></script>
+<script src='js/sprites.js'></script>
 <script>
 
 
@@ -74,8 +77,12 @@ function main() {
             W = WIDTH / COL;
 
     var GAME_PAUSE = false, GAME_START = false;
+    var AUDIO_CAN_PLAYER = false;
     var BGM = document.querySelector('#bgm');
     BGM.load();
+    BGM.addEventListener('canplaythrough',function(){
+        AUDIO_CAN_PLAYER = true;
+    },false);
 
     var startC = document.querySelector('#start-container');
     var startI = document.querySelector('#start');
@@ -87,17 +94,20 @@ function main() {
         startC.style.display = 'none';
         BGM.play();
         GAME_START = true;
+        if (GAME_PAUSE) {
+            GAME_PAUSE = false;
+        }
     }
 
-    window.onblur = function () {
+    window.addEventListener('blur', function () {
         GAME_PAUSE = true;
         BGM.pause();
-    };
+    }, false);
 
-    window.onfocus = function () {
-        GAME_PAUSE = false;
-        BGM.play();
-    };
+    window.addEventListener('focus', function () {
+        startC.style.display = 'block';
+    }, false);
+
 
     startI.addEventListener('touchend', gameStartFn, false);
     startI.addEventListener('click', gameStartFn, false);
@@ -179,16 +189,19 @@ function main() {
             mapToObj[i] = [];
             for (var j = 0; j < COL; ++j) {
                 var type = mapLists[index][i][j];
+                var sp = sprites[type + '.png'].frame;
                 if (type == 4) {
-                    // 主角
-                } else if (type >= 1 && type <= 3) {
-                    // 静态的物体
-                } else if (type == 0) {
-                    // 空的通道
-                    mapToObj[i][j] = null;
+                    var s = null;
+                } else {
+                    var s = new objFn({i: i, j: j, cx: sp.x, cy: sp.y, cw: sp.w, ch: sp.h, img: SPRITE, W: W});
+
                 }
+                mapToObj[i][j] = s;
+
             }
         }
+
+        console.log(mapToObj)
     }
 
 
@@ -299,7 +312,7 @@ function main() {
                 // 当玩家点击到门，钥匙，怪物等，需要将主角移动到点击的物品周围；
                 if (mapLists[mapIndex][i][j] != 0) {
                     var rounds = getRound(end),
-                            bestPathA = null;
+                        bestPathA = null;
 
                     // 选出一条到目的点最优的路径
                     for (var i = 0; i < rounds.length; ++i) {
@@ -333,11 +346,6 @@ function main() {
                     }
                 }
             }
-
-//            if(touch_Point.r == i && touch_Point.c == j){
-//                var tip = new tipFn({i:i,j:j,img:tipImg,aniTime:300});
-//                spriteArray.push(tip);
-//            }
 
         } else {
             var tip = new tipFn({i: i, j: j, img: tipImg, aniTime: 300});
@@ -382,52 +390,38 @@ function main() {
 
     var imgs = [
         'images/0.png',
-        'images/1.png',
-        'images/2.png',
-        'images/3.png',
-        'images/4.png',
-        'images/5.png',
-        'images/6.png',
-        'images/7.png',
-        'images/8.png',
-        'images/9.png',
-        'images/10.png',
-        'images/11.png',
-        'images/12.png',
-        'images/13.png',
-        'images/14.png',
-        'images/15.png',
-        'images/16.png',
-        'images/17.png',
-        'images/18.png',
-        'images/19.png',
-        'images/20.png',
-        'images/21.png'
+        'images/4.png'
     ];
 
     var imgArry = [];
 
     var loadLen = 0;
     var tipImg = new Image();
+    var SPRITE = new Image();
     for (var i = 0; i < imgs.length; ++i) {
         var img = new Image();
         img.src = imgs[i];
         img.i = i;
         img.onload = function () {
+            this.width = W;
+            this.height = W;
             imgArry[this.i] = this;
             loadLen++;
             if (loadLen == imgs.length) {
                 tipImg.src = 'images/tip.png';
                 tipImg.onload = function () {
-                    startC.style.display = 'block';
-                    init(0);
-                    drawInit();
+                    SPRITE.src = 'images/sprite.png';
+                    SPRITE.onload = function () {
+                        startC.style.display = 'block';
+                        init(0);
+                        drawInit();
+                    }
                 };
             }
         };
     }
 
-    // 分类绘制：墙体背景等静态的绘制在静态层，
+    // 分类绘制：墙体背景等静态的绘制在静态层， *******************************************************【重点优化】*************************************************************
     // 主角、动画等精灵绘制在动画层（动画层需要不停的刷新重绘）
     function drawInit() {
         sContext.clearRect(0, 0, WIDTH, WIDTH);
@@ -435,15 +429,19 @@ function main() {
 
         for (var i = 0; i < ROW; ++i) {
             for (var j = 0; j < COL; j++) {
-                sContext.drawImage(imgArry[0], j * W, i * W, W, W);
+                sContext.drawImage(imgArry[0], j * W, i * W, W, W); // 绘制地板
+                var s = mapToObj[i][j];
 
                 // 背景、墙、楼梯绘制在静态层
                 if (mapLists[mapIndex][i][j] >= 0 && mapLists[mapIndex][i][j] <= 3) {
-                    sContext.drawImage(imgArry[mapLists[mapIndex][i][j]], j * W, i * W, W, W);
+                    sContext.drawImage(SPRITE, s.cx, s.cy, s.cw, s.ch, s.dx, s.dy, s.dw, s.dh);
                 } else if (mapLists[mapIndex][i][j] != 4) {
                     // 精灵会制在精灵层，并且添加到精灵数组中
-                    aContext.drawImage(imgArry[mapLists[mapIndex][i][j]], j * W, i * W, W, W);
-                    spriteArray.push({r: i, c: j});
+                    aContext.drawImage(SPRITE, s.cx, s.cy, s.cw, s.ch, s.dx, s.dy, s.dw, s.dh);
+                    spriteArray.push(s);
+                } else {
+                    // 这是主角
+                    aContext.drawImage(imgArry[1], start.c * W, start.r * W, W, W);
                 }
             }
         }
@@ -456,7 +454,8 @@ function main() {
     function animate() {
         if (layerTrans) return;
 
-        if (GAME_START || !GAME_PAUSE) {
+        // 只有在游戏进行时，进行重绘
+        if (GAME_START && GAME_PAUSE == false) {
             // 更新精灵的状态数据
             update();
 
@@ -467,23 +466,25 @@ function main() {
                 if (s.type == 'tip') {
                     aContext.drawImage(s.img, s.c * W, s.r * W, W, W);
                 } else {
-                    aContext.drawImage(imgArry[mapLists[mapIndex][s.r][s.c]], s.c * W, s.r * W, W, W);
+                    aContext.drawImage(s.img, s.cx, s.cy, s.cw, s.ch, s.dx, s.dy, s.dw, s.dh);
                 }
-
             }
 
             // 对主角需要做特殊处理
-            aContext.drawImage(imgArry[4], start.c * W, start.r * W, W, W);
+            aContext.drawImage(imgArry[1], start.c * W, start.r * W, W, W);
+
+//            drawText(FPS);
         }
 
         requestAnimationFrame(animate);  // loop
     }
 
+    var FPS = 0;
     // 更新精灵的一些状态（帧动画精灵，定时动画的精灵）
     function update() {
         var now = +new Date(),
-                delta = now - then,
-                fps = 1000 / (now - lastTime);
+                delta = now - then;
+        fps = 1000 / (now - lastTime);
         lastTime = now;
 
         for (var i = 0; i < spriteArray.length; ++i) {
@@ -493,13 +494,10 @@ function main() {
             }
 
         }
-//        aContext.clearRect( HERO.x, HERO.y, W, W);
-//        HERO.x += HERO.vx / fps ;
-//
-//        if (delta > 1000 / 3) {
-//            then = now - (delta % (1000 / 3));
-//
-//        }
+        if (delta > 500) {
+            then = now - (delta % 500);
+            FPS = fps >> 0;
+        }
 
     }
 

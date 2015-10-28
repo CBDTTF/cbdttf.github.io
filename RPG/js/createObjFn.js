@@ -145,8 +145,21 @@ function tipFn(tipObj) {
     this.r = tipObj.i;
     this.c = tipObj.j;
     this.startTime = +new Date();
-//    this.endTime = 0;
     this.aniTime = tipObj.aniTime;
     this.img = tipObj.img;
     this.type = 'tip';
+}
+
+function objFn(obj){
+    this.r = obj.i;
+    this.c = obj.j;
+    this.cx = obj.cx;
+    this.cy = obj.cy;
+    this.cw = obj.cw;
+    this.ch = obj.ch;
+    this.dx = obj.j*obj.W;
+    this.dy = obj.i*obj.W;
+    this.dw = obj.W;
+    this.dh = obj.W;
+    this.img = obj.img;
 }
