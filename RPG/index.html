@@ -38,9 +38,7 @@
     var HEIGHT = D.documentElement.clientHeight;
     var WIDTH = D.documentElement.clientWidth;
 
-    WIDTH = WIDTH < HEIGHT ? WIDTH : HEIGHT / 1.7 ;
-
-
+    WIDTH = WIDTH < HEIGHT ? WIDTH : HEIGHT / 1.7;
 
     var mainContainer = D.querySelector('#mainContainer');
     mainContainer.style.height = HEIGHT + 'px';
@@ -63,9 +61,12 @@
 
 // 文档载入，main()
 D.addEventListener('DOMContentLoaded', main, false);
+//console.log(window['blur']);
 
 // 当文档载入，执行
 function main() {
+
+    var C = 0;
 
     var COL = 11, ROW = 11;
     var sCanvas = D.querySelector('#staticCanvas'),
@@ -80,9 +81,9 @@ function main() {
     var AUDIO_CAN_PLAYER = false;
     var BGM = document.querySelector('#bgm');
     BGM.load();
-    BGM.addEventListener('canplaythrough',function(){
+    BGM.addEventListener('canplaythrough', function () {
         AUDIO_CAN_PLAYER = true;
-    },false);
+    }, false);
 
     var startC = document.querySelector('#start-container');
     var startI = document.querySelector('#start');
@@ -99,15 +100,22 @@ function main() {
         }
     }
 
-    window.addEventListener('blur', function () {
+    window.onblur = function () {
         GAME_PAUSE = true;
         BGM.pause();
-    }, false);
-
-    window.addEventListener('focus', function () {
+    };
+    window.onfocus = function () {
         startC.style.display = 'block';
-    }, false);
+    };
 
+//    window.addEventListener('blur', function () {
+//        GAME_PAUSE = true;
+//        BGM.pause();
+//    }, false);
+//
+//    window.addEventListener('focus', function () {
+//        startC.style.display = 'block';
+//    }, false);
 
     startI.addEventListener('touchend', gameStartFn, false);
     startI.addEventListener('click', gameStartFn, false);
@@ -124,12 +132,14 @@ function main() {
 
     // 一些参数信息
     var mapIndex, start, end, pathAni, findPathFlag, touch_time, touch_Point, spriteArray, layerTrans;
+
     var HERO = {
         x: 0,
         y: 0,
         vx: W * 2,
         vy: W
     };
+    var HERO_PATH = [], HERO_PATH_NEXT = true;
 
     // 调节画布尺寸
     adjustCanvasSize(sCanvas, WIDTH);
@@ -176,7 +186,9 @@ function main() {
     // 当楼层切换时，参数初始化
     function init(index) {
         mapIndex = index;
-        start = heroMapPos[index];
+//        start = heroMapPos[index];
+        HERO.r = heroMapPos[index].r;
+        HERO.c = heroMapPos[index].c;
         end = {};
         pathAni = false;
         findPathFlag = false;
@@ -191,17 +203,23 @@ function main() {
                 var type = mapLists[index][i][j];
                 var sp = sprites[type + '.png'].frame;
                 if (type == 4) {
-                    var s = null;
+                    HERO.r = i;
+                    HERO.c = j;
+                    HERO.cx = sp.x;
+                    HERO.cy = sp.y;
+                    HERO.cw = sp.w;
+                    HERO.ch = sp.h;
+                    HERO.img = SPRITE,
+                            HERO.dx = j * W,
+                            HERO.dy = i * W,
+                            HERO.dw = W,
+                            HERO.dh = W
                 } else {
                     var s = new objFn({i: i, j: j, cx: sp.x, cy: sp.y, cw: sp.w, ch: sp.h, img: SPRITE, W: W});
-
                 }
                 mapToObj[i][j] = s;
-
             }
         }
-
-        console.log(mapToObj)
     }
 
 
@@ -263,16 +281,20 @@ function main() {
         if (mapLists[mapIndex][i][j] != 1) {
 
             // 目标点在起始点的周围
-            if (isRound(start, end)) {
+            if (isRound(HERO, end)) {
 
                 // 通道
                 if (mapLists[mapIndex][i][j] == 0) {
-                    mapLists[mapIndex][start.r][start.c] = 0;
-                    mapLists[mapIndex][end.r][end.c] = 4;
-                    start.r = end.r;
-                    start.c = end.c;
-                    heroMapPos[mapIndex].r = start.r;
-                    heroMapPos[mapIndex].c = start.c;
+//                    mapLists[mapIndex][HERO.r][HERO.c] = 0;
+//                    mapLists[mapIndex][end.r][end.c] = 4;
+//                    HERO.r = end.r;
+//                    HERO.c = end.c;
+//                    HERO.dx = end.c * W;
+//                    HERO.dy = end.r * W;
+//                    heroMapPos[mapIndex].r = HERO.r;
+//                    heroMapPos[mapIndex].c = HERO.c;
+                    HERO_PATH = [{x:end.r,y:end.c}];
+                    NEXT = null;
 
                 } else {
                     if (mapLists[mapIndex][i][j] == 3) {
@@ -326,7 +348,8 @@ function main() {
                     }
 
                     if (bestPathA) {
-                        heroPathAni(bestPathA);
+                        HERO_PATH = bestPathA;
+                        NEXT = null;
                     } else {
                         var tip = new tipFn({i: touch_Point.r, j: touch_Point.c, img: tipImg, aniTime: 300});
                         spriteArray.push(tip);
@@ -338,7 +361,9 @@ function main() {
                     var pathA = findAPath(end);
 
                     if (pathA) {
-                        heroPathAni(pathA);
+                        HERO_PATH = [];
+                        HERO_PATH = pathA;
+                        NEXT = null;
                     } else {
                         var tip = new tipFn({i: i, j: j, img: tipImg, aniTime: 300});
                         spriteArray.push(tip);
@@ -375,7 +400,7 @@ function main() {
     function findAPath(end) {
         findPathFlag = true;
         var masA = mapUtil.convertArrToAS(mapLists[mapIndex]),
-                pathA = mapUtil.findPathA(masA, start, end, ROW, COL);
+                pathA = mapUtil.findPathA(masA, HERO, end, ROW, COL);
         findPathFlag = false;
         return pathA;
     }
@@ -441,7 +466,8 @@ function main() {
                     spriteArray.push(s);
                 } else {
                     // 这是主角
-                    aContext.drawImage(imgArry[1], start.c * W, start.r * W, W, W);
+//                    aContext.drawImage(imgArry[1], HERO.c * W, HERO.r * W, W, W);
+                    aContext.drawImage(HERO.img, HERO.cx, HERO.cy, HERO.cw, HERO.ch, HERO.dx, HERO.dy, HERO.dw, HERO.dh);
                 }
             }
         }
@@ -456,11 +482,25 @@ function main() {
 
         // 只有在游戏进行时，进行重绘
         if (GAME_START && GAME_PAUSE == false) {
+//
+//            for (var i = 0; i < spriteArray.length; ++i) {
+//                var s = spriteArray[i];
+//                if (s.type == 'tip') {
+//                    aContext.clearRect(s.c * W, s.r * W, W, W);
+//                } else {
+//                    aContext.clearRect(s.dx, s.dy, s.dw, s.dh);
+//                }
+//            }
+//
+//            aContext.clearRect(HERO.dx, HERO.dy, HERO.dw, HERO.dh);
+
+
             // 更新精灵的状态数据
             update();
 
             // 重新绘制精灵--【需要优化，只重绘有动画的精灵】
             aContext.clearRect(0, 0, WIDTH, WIDTH);
+
             for (var i = 0; i < spriteArray.length; ++i) {
                 var s = spriteArray[i];
                 if (s.type == 'tip') {
@@ -471,19 +511,21 @@ function main() {
             }
 
             // 对主角需要做特殊处理
-            aContext.drawImage(imgArry[1], start.c * W, start.r * W, W, W);
+//            aContext.drawImage(imgArry[1], start.c * W, start.r * W, W, W);
+            aContext.drawImage(HERO.img, HERO.cx, HERO.cy, HERO.cw, HERO.ch, HERO.dx, HERO.dy, HERO.dw, HERO.dh);
 
-//            drawText(FPS);
+//            drawText(C++);
         }
 
         requestAnimationFrame(animate);  // loop
     }
 
     var FPS = 0;
+    var nextC,nextR,endX,endY,NEXT;
     // 更新精灵的一些状态（帧动画精灵，定时动画的精灵）
     function update() {
         var now = +new Date(),
-                delta = now - then;
+            delta = now - then;
         fps = 1000 / (now - lastTime);
         lastTime = now;
 
@@ -492,42 +534,99 @@ function main() {
             if (s.type == 'tip') {
                 if (now - s.startTime >= s.aniTime) removeSprite(s);
             }
-
         }
         if (delta > 500) {
             then = now - (delta % 500);
             FPS = fps >> 0;
         }
 
-    }
+        // 英雄移动动画
+        if (NEXT || HERO_PATH.length) {
+            pathAni = true;
 
-    // 英雄移动动画（需要改进）
-    function heroPathAni(path) {
-
-        pathAni = true;
-        var endParent = path.pop();
-
-        mapLists[mapIndex][start.r][start.c] = 0;
-        mapLists[mapIndex][endParent.x][endParent.y] = 4;
-        start.r = endParent.x;
-        start.c = endParent.y;
-
-        var timer = setInterval(function () {
-            if (path.length) {
-                var endParent = path.pop();
-
-                mapLists[mapIndex][start.r][start.c] = 0;
-                mapLists[mapIndex][endParent.x][endParent.y] = 4;
-                start.r = endParent.x;
-                start.c = endParent.y;
-                heroMapPos[mapIndex].r = start.r;
-                heroMapPos[mapIndex].c = start.c;
+            // 获取下一个节点
+            if (HERO_PATH_NEXT) {
+                NEXT = HERO_PATH.pop();
+                if(NEXT){
+                    endX = NEXT.y * W;
+                    endY = NEXT.x * W;
+                    nextC = NEXT.y;
+                    nextR = NEXT.x;
+                    HERO.vx = (endX - HERO.dx)/10 >> 0 ;
+                    HERO.vy = (endY - HERO.dy)/10 >> 0;
+                    HERO_PATH_NEXT = false;
+                }
 
             } else {
-                clearInterval(timer);
-                pathAni = false;
+                HERO.dx += HERO.vx;
+                HERO.dy += HERO.vy;
+
+                // 已经达到目的点判断
+
+                // 向右
+                if(HERO.c < nextC){
+                    if(HERO.dx >= endX){
+                        HERO.dx = endX;
+                        HERO.dy = endY;
+
+                        mapLists[mapIndex][HERO.r][HERO.c] = 0;
+                        mapLists[mapIndex][nextR][nextC] = 4;
+                        HERO.r = nextR;
+                        HERO.c = nextC;
+                        HERO_PATH_NEXT = true;
+                    }
+                }
+
+                // 向左
+                if(HERO.c > nextC){
+                    if(HERO.dx <= endX){
+                        HERO.dx = endX;
+                        HERO.dy = endY;
+
+                        mapLists[mapIndex][HERO.r][HERO.c] = 0;
+                        mapLists[mapIndex][nextR][nextC] = 4;
+                        HERO.r = nextR;
+                        HERO.c = nextC;
+                        HERO_PATH_NEXT = true;
+                    }
+                }
+
+
+                if(HERO.r > nextR){
+                    if(HERO.dy <= endY){
+                        HERO.dx = endX;
+                        HERO.dy = endY;
+
+                        mapLists[mapIndex][HERO.r][HERO.c] = 0;
+                        mapLists[mapIndex][nextR][nextC] = 4;
+                        HERO.r = nextR;
+                        HERO.c = nextC;
+                        HERO_PATH_NEXT = true;
+                    }
+                }
+
+                if(HERO.r < nextR){
+                    if(HERO.dy >= endY){
+                        HERO.dx = endX;
+                        HERO.dy = endY;
+
+                        mapLists[mapIndex][HERO.r][HERO.c] = 0;
+                        mapLists[mapIndex][nextR][nextC] = 4;
+                        HERO.r = nextR;
+                        HERO.c = nextC;
+                        HERO_PATH_NEXT = true;
+                    }
+                }
+
             }
-        }, 130);
+
+        } else {
+            pathAni = false;
+            HERO_PATH = [];
+            HERO_PATH_NEXT = true;
+            NEXT = null
+        }
+
     }
 
     // 删除精灵对象（精灵动画层）
