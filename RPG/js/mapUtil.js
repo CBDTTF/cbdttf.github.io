@@ -144,6 +144,7 @@ var mapUtil = {
                     farr.push(tp);
                     tp = tp.parent;
                 }
+                farr.pop(); // 去除英雄的位置
                 return farr;
             }
         }
